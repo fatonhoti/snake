@@ -1,0 +1,3 @@
+## 🐍 It's Snake innit, not much more to it...
+
+![gameplay image](https://github.com/fatonhoti/snake/blob/main/gameplay.png?raw=true)
