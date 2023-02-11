@@ -3,7 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <stdlib.h> /* srand, rand */
-#include <vector>
+#include <deque>
 
 #define WHITE sf::Color(255, 255, 255)
 #define RED sf::Color(200, 0, 0)
@@ -16,7 +16,7 @@ enum Direction { RIGHT, DOWN, LEFT, UP };
 namespace Snake {
 
 	struct snake {
-		std::vector<sf::Vector2i> body;
+		std::deque<sf::Vector2i> body;
 		Direction dir;
 		int score;
 		int lastX, lastY;

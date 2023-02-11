@@ -38,33 +38,30 @@ namespace Snake {
         m_Player.lastY = last->y;
 
         // Move snake's bodyparts
-        for (auto i = m_Player.body.size() - 1; i >= 1; i--) {
-            m_Player.body[i].x = m_Player.body[i - 1].x;
-            m_Player.body[i].y = m_Player.body[i - 1].y;
-        }
-
-        // Move the head... and the tail ^ follows!
+        m_Player.body.pop_back();
         auto dir = m_Player.dir;
-        sf::Vector2i *head = &m_Player.body[0];
+        sf::Vector2i oldHead = m_Player.body.front();
+        auto newHead = sf::Vector2i(oldHead.x, oldHead.y);
         if (dir == RIGHT) {
-            head->x += m_TileSize;
-            if (head->x + m_TileSize > m_WindowWidth || hasSnakeEatenHimself()) m_Window.close();
+            if (newHead.x + m_TileSize > m_WindowWidth || hasSnakeEatenHimself()) m_Window.close();
+            newHead.x += m_TileSize;
 
         } else if (dir == DOWN) {
-            m_Player.body[0].y += m_TileSize;
-            if (head->y + m_TileSize > m_WindowHeight || hasSnakeEatenHimself()) m_Window.close();
+            if (newHead.y + m_TileSize > m_WindowHeight || hasSnakeEatenHimself()) m_Window.close();
+            newHead.y += m_TileSize;
 
         } else if (dir == LEFT) {
-            m_Player.body[0].x -= m_TileSize;
-            if (head->x < 0 || hasSnakeEatenHimself()) m_Window.close();
+            if (newHead.x < 0 || hasSnakeEatenHimself()) m_Window.close();
+            newHead.x -= m_TileSize;
 
         } else if(dir == UP) {
-            m_Player.body[0].y -= m_TileSize;
-            if (head->y < 0 || hasSnakeEatenHimself()) m_Window.close();
+            if (newHead.y < 0 || hasSnakeEatenHimself()) m_Window.close();
+            newHead.y -= m_TileSize;
 
         } else {
             // Incorrect direction... should never occur.
         }
+        m_Player.body.push_front(newHead);
     }
 
     void Game::growSnake() {
