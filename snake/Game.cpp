@@ -1,4 +1,7 @@
 #include "Game.h"
+#include <iostream>
+#include <chrono>
+#include <thread>
 
 namespace Snake {
 
@@ -6,6 +9,8 @@ namespace Snake {
 
         while (m_Window.isOpen())
         {
+            std::this_thread::sleep_for(std::chrono::milliseconds(40));
+
             sf::Event event;
             while (m_Window.pollEvent(event))
                 if (event.type == sf::Event::Closed) m_Window.close();
@@ -19,13 +24,11 @@ namespace Snake {
             m_Window.clear(BLACK);
             updateSnake();
             if (hasSnakeEatenFood()) {
-                m_Player.score += 1;
                 growSnake();
                 spawnFood();
             }
-            drawSnake();
             drawFood();
-            drawScore();
+            drawSnake();
             m_Window.display();
         }
     }
@@ -33,12 +36,12 @@ namespace Snake {
     void Game::updateSnake() {
 
         // Keep track of the position of the last bodypart
-        auto last = &m_Player.body[m_Player.body.size() - 1];
-        m_Player.lastX = last->x;
-        m_Player.lastY = last->y;
-
-        // Move snake's bodyparts
+        sf::Vector2i last = m_Player.body.back();
+        m_Player.lastX = last.x;
+        m_Player.lastY = last.y;
         m_Player.body.pop_back();
+
+        // Set new position of head
         auto dir = m_Player.dir;
         sf::Vector2i oldHead = m_Player.body.front();
         auto newHead = sf::Vector2i(oldHead.x, oldHead.y);
@@ -65,7 +68,7 @@ namespace Snake {
     }
 
     void Game::growSnake() {
-        m_Player.body.push_back(sf::Vector2i(m_Player.lastX, m_Player.lastY));
+        m_Player.body.emplace_back(m_Player.lastX, m_Player.lastY);
     }
 
     bool Game::hasSnakeEatenFood() {
@@ -73,24 +76,27 @@ namespace Snake {
     }
 
     bool Game::hasSnakeEatenHimself() {
-        auto head = &m_Player.body[0];
-        for (size_t i = 2; i < m_Player.body.size(); i++) {
-            auto bp = &m_Player.body[i];
-            if (head->x == bp->x and head->y == bp->y) 
+        auto it = m_Player.body.begin();
+        sf::Vector2i head = *it++;
+        while(it != m_Player.body.end()) {
+            sf::Vector2i bp = *it++;
+            if (head.x == bp.x && head.y == bp.y)
                 return true;
         }
         return false;
     }
 
     void Game::drawSnake() {
-        float tileOffset = 0.0;
+        float tileOffset = 1.0f;
         sf::RectangleShape shape(sf::Vector2f(m_TileSize - tileOffset, m_TileSize - tileOffset));
-        for(size_t i = 0; i < m_Player.body.size(); i++) {
-            auto bodyPart = &m_Player.body[i];
-            shape.setPosition(bodyPart->x + tileOffset, bodyPart->y + tileOffset);
-            if(i != 0 && i % 2 != 0) shape.setFillColor(GREENER);
+        int i = 0;
+        for (auto &bp : m_Player.body) {
+            shape.setPosition(bp.x + tileOffset, bp.y + tileOffset);
+            if (i == 0) shape.setFillColor(GREENEST);
+            else if (i % 2) shape.setFillColor(GREENER);
             else shape.setFillColor(GREEN);
             m_Window.draw(shape);
+            i++;
         }
     }
 
@@ -99,43 +105,33 @@ namespace Snake {
         do {
             int randX = rand() % m_WindowWidth;
             int randY = rand() % m_WindowHeight;
-            m_Food.x = static_cast<int>(randX - (randX % m_TileSize));
-            m_Food.y = static_cast<int>(randY - (randY % m_TileSize));
+            m_Food.x = randX - (randX % m_TileSize);
+            m_Food.y = randY - (randY % m_TileSize);
             // Spawned on snake?
-            for (size_t i = 0; i < m_Player.body.size(); i++) {
-                sf::Vector2i bp = m_Player.body[i];
-                if (bp.x == m_Food.x && bp.y == m_Food.y) {
+            auto it = m_Player.body.begin();
+            while (it != m_Player.body.end()) {
+                sf::Vector2i bp = *it++;
+                if (m_Food.x == bp.x && m_Food.y == bp.y) {
                     invalidSpawn = true;
                     break;
-                };
+                }
             }
         } while (invalidSpawn);
     }
 
     void Game::drawFood() {
         sf::RectangleShape shape(sf::Vector2f(static_cast<float>(m_TileSize), static_cast<float>(m_TileSize)));
-        shape.setFillColor(RED);
         shape.setPosition(static_cast<float>(m_Food.x), static_cast<float>(m_Food.y));
+        shape.setFillColor(RED);
         m_Window.draw(shape);
     }
 
-    void Game::drawScore() {
-        sf::Text text;
-        text.setFont(m_Font);
-        text.setString("Score " + std::to_string(m_Player.score));
-        text.setCharacterSize(24);
-        text.setFillColor(WHITE);
-        text.setPosition(sf::Vector2f(10.0, 10.0));
-        m_Window.draw(text);
-    }
-
     void Game::initSnake() {
-        m_Player = {};
-        int startX = m_WindowWidth / 2, startY = m_WindowHeight / 2;
-        m_Player.body.push_back(sf::Vector2i(startX, startY));
-        m_Player.body.push_back(sf::Vector2i(startX - m_TileSize, startY));
+        int startX = m_WindowWidth / 2;
+        int startY = m_WindowHeight / 2;
+        m_Player.body.emplace_back(startX, startY);
+        m_Player.body.emplace_back(startX - m_TileSize, startY);
         m_Player.dir = RIGHT;
-        m_Player.score = 0;
         m_Player.lastX = startX;
         m_Player.lastY = startY;
     }
@@ -145,11 +141,9 @@ namespace Snake {
         m_WindowWidth(30 * m_TileSize),
         m_WindowHeight(30 * m_TileSize),
         m_Window(sf::VideoMode(m_WindowWidth, m_WindowHeight), "Snake", sf::Style::Titlebar | sf::Style::Close),
+        m_Player({}),
         m_Food({})
     {
-        if(!m_Font.loadFromFile("GameFont.ttf")){}
-        m_Window.setVerticalSyncEnabled(true);
-        m_Window.setFramerateLimit(15);
         srand(static_cast<unsigned int>(time(NULL)));
         initSnake();
         spawnFood(); // Initial piece of food
